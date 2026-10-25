@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Customers Directory{% endblock %}
+{% block header_title %}Customer Accounts Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <p class="text-secondary small mb-0">Manage customer accounts, segmentation categories, and contact information.</p>
+    </div>
+    {% if current_user.can_create_orders() %}
+    <a href="{{ url_for('customers.create') }}" class="btn btn-sm btn-primary-custom">
+        <i class="fa-solid fa-user-plus me-1"></i>New Customer
+    </a>
+    {% endif %}
+</div>
+
+<!-- Filters Bar -->
+<div class="filter-bar mb-3">
+    <form method="GET" action="{{ url_for('customers.index') }}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Customer or Email</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" class="form-control" name="search" placeholder="Type customer name or email..." value="{{ search }}">
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Customer Segment</label>
+            <select class="form-select form-select-sm" name="segment">
+                <option value="">All Segments</option>
+                {% for seg in segments %}
+                    <option value="{{ seg }}" {% if selected_segment == seg %}selected{% endif %}>{{ seg }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">City Location</label>
+            <select class="form-select form-select-sm" name="city">
+                <option value="">All Cities</option>
+                {% for c in cities %}
+                    <option value="{{ c }}" {% if selected_city == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-primary-custom flex-grow-1">Filter</button>
+            <a href="{{ url_for('customers.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Customers Table -->
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Customer Name</th>
+                    <th>Segment</th>
+                    <th>Location</th>
+                    <th>Contact Details</th>
+                    <th>Total Orders</th>
+                    <th>Registered</th>
+                    <th class="text-end" style="width: 130px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if customers.items %}
+                    {% for customer in customers.items %}
+                    <tr>
+                        <td class="num-tabular text-muted fw-semibold">#{{ customer.customer_id }}</td>
+                        <td>
+                            <a href="{{ url_for('customers.detail', customer_id=customer.customer_id) }}" class="fw-bold text-dark text-decoration-none">
+                                {{ customer.customer_name }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge {% if customer.customer_segment == 'Enterprise' %}bg-primary{% elif customer.customer_segment == 'Wholesale' %}bg-warning text-dark{% elif customer.customer_segment == 'SMB' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                {{ customer.customer_segment }}
+                            </span>
+                        </td>
+                        <td>{{ customer.city }}, {{ customer.state }}</td>
+                        <td class="small text-muted">
+                            <div><i class="fa-regular fa-envelope me-1"></i>{{ customer.email or 'N/A' }}</div>
+                            <div><i class="fa-solid fa-phone me-1"></i>{{ customer.phone or 'N/A' }}</div>
+                        </td>
+                        <td class="num-tabular fw-semibold">{{ customer.total_orders_count }}</td>
+                        <td class="small text-muted">{{ customer.registration_date|datetime_fmt }}</td>
+                        <td class="text-end">
+                            <a href="{{ url_for('customers.detail', customer_id=customer.customer_id) }}" class="btn btn-xs btn-outline-secondary py-1 px-2" title="View Detail">
+                                <i class="fa-regular fa-eye"></i>
+                            </a>
+                            {% if current_user.can_create_orders() %}
+                            <a href="{{ url_for('customers.edit', customer_id=customer.customer_id) }}" class="btn btn-xs btn-outline-primary py-1 px-2" title="Edit Customer">
+                                <i class="fa-regular fa-pen-to-square"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-users fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                            No customer records match the specified filters.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if customers.pages > 1 %}
+    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">
+            Page {{ customers.page }} of {{ customers.pages }} ({{ customers.total }} total customers)
+        </span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if customers.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers.index', page=customers.prev_num, search=search, segment=selected_segment, city=selected_city) }}">Previous</a>
+                </li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ customers.page }}</span></li>
+                {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers.index', page=customers.next_num, search=search, segment=selected_segment, city=selected_city) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.product_name }} ({{ product.SKU }}){% endblock %}
+{% block header_title %}Product Detail: {{ product.product_name }}{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge bg-light text-dark border mb-1">{{ product.category.category_name }}</span>
+                        <h5 class="fw-bold mb-0 text-dark">{{ product.product_name }}</h5>
+                        <div class="font-monospace text-secondary small">SKU: {{ product.SKU }}</div>
+                    </div>
+                    {% if current_user.can_modify_catalog() %}
+                    <a href="{{ url_for('products.edit', product_id=product.product_id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="my-3 p-3 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-muted">Selling Price:</span>
+                        <span class="h5 fw-bold mb-0 text-primary num-tabular">{{ product.unit_price|currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-muted">Cost of Goods:</span>
+                        <span class="num-tabular text-secondary">{{ product.unit_cost|currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <span class="small fw-semibold text-dark">Unit Margin:</span>
+                        <span class="num-tabular text-success fw-bold">{{ product.unit_profit|currency }} ({{ product.margin_percentage }}%)</span>
+                    </div>
+                </div>
+
+                <ul class="list-unstyled small mb-3">
+                    <li class="py-2 border-bottom d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Inventory on Hand:</span>
+                        <span class="badge {% if product.stock_quantity == 0 %}bg-danger{% elif product.is_low_stock %}bg-warning text-dark{% else %}bg-success{% endif %} num-tabular fs-6">
+                            {{ product.stock_quantity }} units
+                        </span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Safety Reorder Threshold:</span>
+                        <span class="num-tabular fw-semibold">{{ product.reorder_level }} units</span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Total Inventory Valuation:</span>
+                        <span class="num-tabular fw-bold text-dark">{{ product.stock_valuation|currency }}</span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Product Lifecycle Status:</span>
+                        <span class="badge-status status-{{ product.product_status|lower|replace(' ', '-') }}">{{ product.product_status }}</span>
+                    </li>
+                </ul>
+
+                {% if current_user.can_modify_catalog() %}
+                <!-- Quick Restock Box -->
+                <div class="p-3 border rounded bg-white">
+                    <label class="form-label small fw-bold text-dark mb-1">
+                        <i class="fa-solid fa-truck-ramp-box text-primary me-1"></i>Quick Inventory Restock
+                    </label>
+                    <form method="POST" action="{{ url_for('products.quick_stock', product_id=product.product_id) }}" class="d-flex gap-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="number" class="form-control form-control-sm" name="add_quantity" min="1" placeholder="Units to add" required>
+                        <button type="submit" class="btn btn-sm btn-primary-custom text-nowrap">Restock</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Sales Performance -->
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">Sales Transaction Inclusions</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-secondary mb-3">
+                    Recent orders containing this line item. Notice that historical transactions snapshot the unit price and cost applicable at the exact moment of sale.
+                </p>
+
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Price at Sale</th>
+                                <th class="text-end">Discount</th>
+                                <th class="text-end">Recognized Line Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set order_items = product.order_items.limit(10).all() %}
+                            {% if order_items %}
+                                {% for item in order_items %}
+                                <tr>
+                                    <td class="num-tabular fw-bold">
+                                        <a href="{{ url_for('orders.detail', order_id=item.order_id) }}" class="text-decoration-none">
+                                            #{{ item.order_id }}
+                                        </a>
+                                    </td>
+                                    <td class="small">{{ item.order.customer.customer_name }}</td>
+                                    <td class="num-tabular text-center">{{ item.quantity }}</td>
+                                    <td class="num-tabular text-end">{{ item.unit_price_at_sale|currency }}</td>
+                                    <td class="num-tabular text-end text-muted">{{ item.discount_amount|currency }}</td>
+                                    <td class="num-tabular text-end fw-semibold text-dark">{{ item.line_revenue|currency }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        No orders recorded yet for this product.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

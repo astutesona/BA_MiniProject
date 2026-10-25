@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Customer Account{% endblock %}
+{% block header_title %}{{ action }} Customer Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-user-pen text-primary me-2"></i>{{ action }} Customer Account Information
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Customer / Organization Name *</label>
+                        <input type="text" class="form-control" name="customer_name" value="{{ customer.customer_name if customer else '' }}" placeholder="e.g. Apex Technologies Inc" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Email Address</label>
+                            <input type="email" class="form-control" name="email" value="{{ customer.email if customer else '' }}" placeholder="procurement@corp.internal">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Phone Number</label>
+                            <input type="text" class="form-control" name="phone" value="{{ customer.phone if customer else '' }}" placeholder="+1 (555) 019-2834">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">City *</label>
+                            <input type="text" class="form-control" name="city" value="{{ customer.city if customer else '' }}" placeholder="e.g. New York" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">State *</label>
+                            <input type="text" class="form-control" name="state" value="{{ customer.state if customer else '' }}" placeholder="e.g. NY" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold text-secondary">Client Segment *</label>
+                        <select class="form-select" name="customer_segment" required>
+                            {% for seg in ['Enterprise', 'SMB', 'Retail', 'Wholesale'] %}
+                                <option value="{{ seg }}" {% if customer and customer.customer_segment == seg %}selected{% endif %}>{{ seg }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small">Used for sales categorization and segment-level analytical aggregations.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('customers.index') }}" class="btn btn-secondary-custom">Cancel</a>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fa-solid fa-check me-1"></i>Save Customer Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

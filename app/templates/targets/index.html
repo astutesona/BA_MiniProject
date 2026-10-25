@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Targets & Goal Benchmarks{% endblock %}
+{% block header_title %}Sales Targets & Performance Benchmarks{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Targets Table -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">Configured Sales Targets & Attainment Matrix</h6>
+                <a href="{{ url_for('reports.index', report_type='sales_targets', export=1) }}" class="btn btn-xs btn-outline-secondary">
+                    <i class="fa-solid fa-download me-1"></i>Export Targets
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Scope / Category</th>
+                            <th class="text-end">Target ($)</th>
+                            <th class="text-end">Actual ($)</th>
+                            <th class="text-center">Achievement</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if targets %}
+                            {% for t in targets %}
+                            <tr>
+                                <td class="num-tabular fw-bold text-dark">{{ t.period }}</td>
+                                <td>
+                                    <span class="badge {% if t.category == 'Overall' %}bg-primary{% else %}bg-light text-dark border{% endif %}">
+                                        {{ t.category }}
+                                    </span>
+                                </td>
+                                <td class="num-tabular text-end text-muted">{{ t.target_amount|currency }}</td>
+                                <td class="num-tabular text-end fw-bold text-dark">{{ t.actual_revenue|currency }}</td>
+                                <td class="num-tabular text-center fw-bold {% if t.achievement_pct >= 100 %}text-success{% elif t.achievement_pct >= 80 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ t.achievement_pct }}%
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge-status {% if t.status == 'Achieved' %}status-completed{% elif t.status == 'Near Target' %}status-pending{% else %}status-cancelled{% endif %}">
+                                        {{ t.status }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('targets.delete', target_id=t.target_id) }}" class="d-inline" onsubmit="return confirm('Delete this target benchmark?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-xs btn-outline-danger py-1 px-2" title="Delete">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="7" class="text-center py-4 text-muted">No sales targets configured yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configure Target Form -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-bullseye text-primary me-2"></i>Configure Sales Target
+                </h6>
+            </div>
+            <div class="card-body p-3">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Target Period (YYYY-MM) *</label>
+                        <input type="month" class="form-control form-control-sm" name="target_period" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Target Type</label>
+                        <select class="form-select form-select-sm" name="target_type" id="targetTypeSelect" onchange="toggleCategorySelect()">
+                            <option value="Monthly Revenue">Monthly Overall Revenue</option>
+                            <option value="Category Revenue">Category Specific Revenue</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="catSelectGroup" style="display: none;">
+                        <label class="form-label small fw-semibold text-secondary">Target Category</label>
+                        <select class="form-select form-select-sm" name="category_id">
+                            <option value="">-- Choose Category --</option>
+                            {% for c in categories %}
+                                <option value="{{ c.category_id }}">{{ c.category_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold text-secondary">Target Revenue Amount ($) *</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" min="1" class="form-control" name="target_amount" placeholder="50000.00" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary-custom btn-sm w-100">
+                        <i class="fa-solid fa-check me-1"></i>Save Goal Benchmark
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleCategorySelect() {
+    const type = document.getElementById('targetTypeSelect').value;
+    const catGroup = document.getElementById('catSelectGroup');
+    catGroup.style.display = (type === 'Category Revenue') ? 'block' : 'none';
+}
+</script>
+{% endblock %}

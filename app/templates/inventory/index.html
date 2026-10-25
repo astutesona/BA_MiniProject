@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Analytics & Stock Valuation{% endblock %}
+{% block header_title %}Inventory Intelligence & Valuation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <p class="text-secondary small mb-0">Stock health tracking, valuation analysis at cost and retail, and SKU velocity analysis.</p>
+    </div>
+    <div>
+        <a href="{{ url_for('reports.index', report_type='inventory', export=1) }}" class="btn btn-sm btn-primary-custom">
+            <i class="fa-solid fa-download me-1"></i>Export Inventory CSV
+        </a>
+    </div>
+</div>
+
+<!-- Summary Valuation Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Inventory Cost Valuation</span></div>
+            <div class="kpi-value num-tabular text-dark">{{ summary.total_cost_valuation|currency }}</div>
+            <div class="kpi-footer text-muted small">Based on recorded unit costs</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Potential Retail Value</span></div>
+            <div class="kpi-value num-tabular text-primary">{{ summary.total_retail_valuation|currency }}</div>
+            <div class="kpi-footer text-muted small">Based on current selling prices</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Unrealized Gross Margin</span></div>
+            <div class="kpi-value num-tabular text-success">{{ summary.potential_gross_profit|currency }}</div>
+            <div class="kpi-footer text-muted small">Spread on stock on hand</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">Stockout Alerts</span></div>
+            <div class="kpi-value num-tabular {% if summary.low_stock_count > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ summary.low_stock_count }} items
+            </div>
+            <div class="kpi-footer text-muted small">
+                {{ summary.out_of_stock_count }} completely depleted
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Category-Wise Valuation -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">Category-wise Capital Allocation & Stock Value</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category Name</th>
+                            <th class="text-center">SKU Count</th>
+                            <th class="text-center">Units on Hand</th>
+                            <th class="text-end">Cost Valuation</th>
+                            <th class="text-end">Retail Valuation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cat in category_valuation %}
+                        <tr>
+                            <td class="fw-semibold text-dark">{{ cat.category_name }}</td>
+                            <td class="num-tabular text-center">{{ cat.product_count }}</td>
+                            <td class="num-tabular text-center">{{ cat.total_units }}</td>
+                            <td class="num-tabular text-end text-muted">{{ cat.cost_value|currency }}</td>
+                            <td class="num-tabular text-end fw-bold text-dark">{{ cat.retail_value|currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Velocity Explanation -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">SKU Velocity & Turnover Criteria</h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Window: {{ selected_days }} Days
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('inventory.index', days=30) }}">30 Days</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('inventory.index', days=60) }}">60 Days</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('inventory.index', days=90) }}">90 Days</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('inventory.index', days=180) }}">180 Days</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="p-3 bg-light rounded mb-3 small text-secondary">
+                    <strong class="text-dark d-block mb-1">Turnover Classification Methodology:</strong>
+                    Velocity is evaluated strictly against completed and paid sales transactions within the selected {{ selected_days }}-day sliding window. Products with no recorded sales history are distinguished from active slow-moving stock to prevent audit false-positives.
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div>
+                        <span class="badge bg-success me-1">Fast Moving</span>
+                        <span class="small fw-semibold text-dark">&ge; 15 units sold</span>
+                    </div>
+                    <span class="badge bg-light text-dark border num-tabular">{{ velocity.fast_moving|length }} SKUs</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div>
+                        <span class="badge bg-danger me-1">Slow Moving</span>
+                        <span class="small fw-semibold text-dark">&le; 2 units sold with active stock</span>
+                    </div>
+                    <span class="badge bg-light text-dark border num-tabular">{{ velocity.slow_moving|length }} SKUs</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between py-2">
+                    <div>
+                        <span class="badge bg-secondary me-1">Standard Velocity</span>
+                        <span class="small fw-semibold text-dark">Normal stock replenishment cycle</span>
+                    </div>
+                    <span class="badge bg-light text-dark border num-tabular">{{ velocity.normal|length }} SKUs</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fast vs Slow Moving Tables -->
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-success">
+                    <i class="fa-solid fa-bolt me-1"></i>Fast-Moving SKUs (Top Velocity)
+                </h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th class="text-center">Units Sold</th>
+                            <th class="text-center">Current Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if velocity.fast_moving %}
+                            {% for p in velocity.fast_moving %}
+                            <tr>
+                                <td class="fw-semibold">{{ p.product_name }}</td>
+                                <td class="font-monospace small text-muted">{{ p.sku }}</td>
+                                <td class="num-tabular text-center fw-bold text-success">{{ p.units_sold }}</td>
+                                <td class="num-tabular text-center">{{ p.stock }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="text-center py-3 text-muted">No products met the fast-moving threshold in this window.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-danger">
+                    <i class="fa-solid fa-hourglass-end me-1"></i>Slow-Moving SKUs (Capital Tied Up)
+                </h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th class="text-center">Units Sold</th>
+                            <th class="text-center">Current Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if velocity.slow_moving %}
+                            {% for p in velocity.slow_moving %}
+                            <tr>
+                                <td class="fw-semibold">{{ p.product_name }}</td>
+                                <td class="font-monospace small text-muted">{{ p.sku }}</td>
+                                <td class="num-tabular text-center text-muted">{{ p.units_sold }}</td>
+                                <td class="num-tabular text-center fw-bold text-danger">{{ p.stock }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="text-center py-3 text-muted">No slow-moving inventory detected in this window.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

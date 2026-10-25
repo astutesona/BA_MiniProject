@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Orders{% endblock %}
+{% block header_title %}Sales Orders & Transaction Records{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <p class="text-secondary small mb-0">Review sales orders, fulfillment states, point-of-sale snapshots, and payment validations.</p>
+    </div>
+    {% if current_user.can_create_orders() %}
+    <a href="{{ url_for('orders.create') }}" class="btn btn-sm btn-primary-custom">
+        <i class="fa-solid fa-cart-plus me-1"></i>Create New Order
+    </a>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="filter-bar mb-3">
+    <form method="GET" action="{{ url_for('orders.index') }}" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Customer or Order #</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" class="form-control" name="search" placeholder="Customer name or Order ID..." value="{{ search }}">
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Order Status</label>
+            <select class="form-select form-select-sm" name="status">
+                <option value="">All Statuses</option>
+                {% for st in ['Completed', 'Pending', 'Processing', 'Cancelled', 'Returned'] %}
+                    <option value="{{ st }}" {% if status_filter == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Payment Status</label>
+            <select class="form-select form-select-sm" name="payment">
+                <option value="">All Payments</option>
+                {% for pay in ['Paid', 'Pending', 'Failed', 'Refunded'] %}
+                    <option value="{{ pay }}" {% if payment_filter == pay %}selected{% endif %}>{{ pay }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Start Date</label>
+            <input type="date" class="form-control form-control-sm" name="start_date" value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-3 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-primary-custom flex-grow-1">Filter</button>
+            <a href="{{ url_for('orders.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Orders Table -->
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 85px;">Order #</th>
+                    <th>Date & Time</th>
+                    <th>Customer Name</th>
+                    <th>Payment Method</th>
+                    <th>Order Status</th>
+                    <th>Payment Status</th>
+                    <th class="text-center">Units</th>
+                    <th class="text-end">Recognized Total</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if orders.items %}
+                    {% for ord in orders.items %}
+                    <tr>
+                        <td class="num-tabular fw-bold text-dark">
+                            <a href="{{ url_for('orders.detail', order_id=ord.order_id) }}" class="text-decoration-none text-dark">
+                                #{{ ord.order_id }}
+                            </a>
+                        </td>
+                        <td class="small text-muted">{{ ord.order_date|datetime_fmt('%b %d, %Y %H:%M') }}</td>
+                        <td>
+                            <a href="{{ url_for('customers.detail', customer_id=ord.customer.customer_id) }}" class="fw-semibold text-decoration-none text-dark">
+                                {{ ord.customer.customer_name }}
+                            </a>
+                            <span class="badge bg-light text-secondary border ms-1 small">{{ ord.customer.customer_segment }}</span>
+                        </td>
+                        <td class="small text-muted">{{ ord.payment_method }}</td>
+                        <td>
+                            <span class="badge-status status-{{ ord.order_status|lower }}">
+                                {{ ord.order_status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge-status status-{{ ord.payment_status|lower }}">
+                                {{ ord.payment_status }}
+                            </span>
+                        </td>
+                        <td class="num-tabular text-center">{{ ord.total_units }}</td>
+                        <td class="num-tabular text-end fw-bold text-dark">{{ ord.total_revenue|currency }}</td>
+                        <td class="text-end">
+                            <a href="{{ url_for('orders.detail', order_id=ord.order_id) }}" class="btn btn-xs btn-outline-secondary py-1 px-2" title="Order Details">
+                                <i class="fa-regular fa-file-lines"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-receipt fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                            No sales orders found matching query parameters.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if orders.pages > 1 %}
+    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">
+            Page {{ orders.page }} of {{ orders.pages }} ({{ orders.total }} total sales orders)
+        </span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if orders.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('orders.index', page=orders.prev_num, search=search, status=status_filter, payment=payment_filter, start_date=start_date, end_date=end_date) }}">Previous</a>
+                </li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ orders.page }}</span></li>
+                {% if orders.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('orders.index', page=orders.next_num, search=search, status=status_filter, payment=payment_filter, start_date=start_date, end_date=end_date) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

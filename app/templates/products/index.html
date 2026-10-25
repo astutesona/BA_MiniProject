@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Products Catalog{% endblock %}
+{% block header_title %}Product Catalog & Inventory Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <p class="text-secondary small mb-0">Maintain catalog products, unit pricing, historical costs, and inventory thresholds.</p>
+    </div>
+    {% if current_user.can_modify_catalog() %}
+    <a href="{{ url_for('products.create') }}" class="btn btn-sm btn-primary-custom">
+        <i class="fa-solid fa-plus me-1"></i>New Product
+    </a>
+    {% endif %}
+</div>
+
+<!-- Filters Bar -->
+<div class="filter-bar mb-3">
+    <form method="GET" action="{{ url_for('products.index') }}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Product or SKU</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" class="form-control" name="search" placeholder="Type product name or SKU..." value="{{ search }}">
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Category</label>
+            <select class="form-select form-select-sm" name="category_id">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.category_id }}" {% if selected_category == cat.category_id %}selected{% endif %}>{{ cat.category_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+            <select class="form-select form-select-sm" name="status">
+                <option value="">All Statuses</option>
+                {% for st in ['Active', 'Discontinued', 'Out of Stock'] %}
+                    <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-primary-custom flex-grow-1">Filter</button>
+            <a href="{{ url_for('products.index', low_stock=1) }}" class="btn btn-sm btn-outline-danger {% if low_stock_only %}active{% endif %}" title="Filter items at or below reorder level">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>Low Stock
+            </a>
+            <a href="{{ url_for('products.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Products Table -->
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-end">Cost</th>
+                    <th class="text-end">Unit Margin</th>
+                    <th class="text-center">Stock</th>
+                    <th class="text-center">Reorder Threshold</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if products.items %}
+                    {% for p in products.items %}
+                    <tr>
+                        <td class="font-monospace small fw-bold text-secondary">{{ p.SKU }}</td>
+                        <td>
+                            <a href="{{ url_for('products.detail', product_id=p.product_id) }}" class="fw-bold text-dark text-decoration-none">
+                                {{ p.product_name }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ p.category.category_name }}</span></td>
+                        <td class="num-tabular text-end fw-semibold">{{ p.unit_price|currency }}</td>
+                        <td class="num-tabular text-end text-muted">{{ p.unit_cost|currency }}</td>
+                        <td class="num-tabular text-end text-success fw-semibold">{{ p.unit_profit|currency }} ({{ p.margin_percentage }}%)</td>
+                        <td class="num-tabular text-center">
+                            <span class="badge {% if p.stock_quantity == 0 %}bg-danger{% elif p.stock_quantity <= p.reorder_level %}bg-warning text-dark{% else %}bg-success-subtle text-success border border-success-subtle{% endif %}">
+                                {{ p.stock_quantity }}
+                            </span>
+                        </td>
+                        <td class="num-tabular text-center text-muted">{{ p.reorder_level }}</td>
+                        <td>
+                            <span class="badge-status status-{{ p.product_status|lower|replace(' ', '-') }}">
+                                {{ p.product_status }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('products.detail', product_id=p.product_id) }}" class="btn btn-xs btn-outline-secondary py-1 px-2" title="View Detail">
+                                <i class="fa-regular fa-eye"></i>
+                            </a>
+                            {% if current_user.can_modify_catalog() %}
+                            <a href="{{ url_for('products.edit', product_id=p.product_id) }}" class="btn btn-xs btn-outline-primary py-1 px-2" title="Edit Product">
+                                <i class="fa-regular fa-pen-to-square"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-box-open fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                            No catalog products match the specified criteria.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if products.pages > 1 %}
+    <div class="card-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">
+            Page {{ products.page }} of {{ products.pages }} ({{ products.total }} items in catalog)
+        </span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if products.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('products.index', page=products.prev_num, search=search, category_id=selected_category, status=selected_status, low_stock=1 if low_stock_only else 0) }}">Previous</a>
+                </li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ products.page }}</span></li>
+                {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('products.index', page=products.next_num, search=search, category_id=selected_category, status=selected_status, low_stock=1 if low_stock_only else 0) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

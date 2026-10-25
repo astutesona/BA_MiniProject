@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}User Management & RBAC{% endblock %}
+{% block header_title %}User Accounts & Role-Based Authorization{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <p class="text-secondary small mb-0">System access control, role assignment, and account status management.</p>
+    </div>
+    {% if current_user.can_manage_users() %}
+    <a href="{{ url_for('users.create') }}" class="btn btn-sm btn-primary-custom">
+        <i class="fa-solid fa-user-plus me-1"></i>New User Account
+    </a>
+    {% endif %}
+</div>
+
+<!-- Users List -->
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="fw-bold mb-0 text-dark">System Users Directory ({{ users|length }} accounts)</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Assigned Role</th>
+                    <th>Account Status</th>
+                    <th>Created</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="num-tabular text-muted fw-bold">#{{ u.user_id }}</td>
+                    <td class="fw-bold text-dark">{{ u.full_name }}</td>
+                    <td class="font-monospace small">{{ u.username }}</td>
+                    <td class="small text-muted">{{ u.email }}</td>
+                    <td>
+                        <span class="user-role-badge {% if u.role == 'Admin' %}role-admin{% elif u.role == 'Manager' %}role-manager{% else %}role-sales{% endif %}">
+                            {{ u.role }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Deactivated</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ u.created_at|datetime_fmt }}</td>
+                    <td class="text-end">
+                        {% if u.user_id != current_user.user_id %}
+                        <form method="POST" action="{{ url_for('users.toggle_status', user_id=u.user_id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-xs {% if u.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %} py-1 px-2">
+                                <i class="fa-solid {% if u.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                                {{ 'Deactivate' if u.is_active else 'Activate' }}
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="badge bg-light text-muted border small">Current Session</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

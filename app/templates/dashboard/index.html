@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Executive Intelligence Dashboard{% endblock %}
+{% block header_title %}Business Sales Intelligence Dashboard{% endblock %}
+
+{% block content %}
+<!-- Interactive Filters Toolbar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('dashboard.index') }}" id="dashboardFilterForm" class="row g-2 align-items-end">
+        <div class="col-md-3 col-sm-6">
+            <label class="form-label small fw-semibold text-muted mb-1">Start Date</label>
+            <input type="date" class="form-control form-control-sm" name="start_date" id="filter_start_date" value="{{ filters.get('start_date', '') }}">
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <label class="form-label small fw-semibold text-muted mb-1">End Date</label>
+            <input type="date" class="form-control form-control-sm" name="end_date" id="filter_end_date" value="{{ filters.get('end_date', '') }}">
+        </div>
+
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label small fw-semibold text-muted mb-1">Category</label>
+            <select class="form-select form-select-sm" name="category_id">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.category_id }}" {% if filters.get('category_id')|string == cat.category_id|string %}selected{% endif %}>
+                        {{ cat.category_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label small fw-semibold text-muted mb-1">Client Segment</label>
+            <select class="form-select form-select-sm" name="customer_segment">
+                <option value="">All Segments</option>
+                {% for seg in segments %}
+                    <option value="{{ seg }}" {% if filters.get('customer_segment') == seg %}selected{% endif %}>
+                        {{ seg }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2 col-sm-12 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-primary-custom flex-grow-1">
+                <i class="fa-solid fa-filter me-1"></i>Apply
+            </button>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filters">
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+            </a>
+        </div>
+    </form>
+
+    <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top">
+        <span class="small text-muted fw-semibold me-1">Quick Windows:</span>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 small" onclick="setDateFilter('last30'); document.getElementById('dashboardFilterForm').submit();">Last 30 Days</button>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 small" onclick="setDateFilter('thisMonth'); document.getElementById('dashboardFilterForm').submit();">This Month</button>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 small" onclick="setDateFilter('ytd'); document.getElementById('dashboardFilterForm').submit();">Year-to-Date</button>
+    </div>
+</div>
+
+<!-- 8 Core Executive KPI Cards -->
+<div class="kpi-grid">
+    <!-- 1. Total Revenue -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Recognized Revenue</span>
+            <div class="kpi-icon-wrap" style="color: var(--accent-primary);"><i class="fa-solid fa-dollar-sign"></i></div>
+        </div>
+        <div class="kpi-value num-tabular">{{ kpis.total_revenue|currency }}</div>
+        <div class="kpi-footer">
+            <span class="text-success small fw-semibold"><i class="fa-solid fa-circle-check"></i> Completed & Paid</span>
+            <span>net of discounts</span>
+        </div>
+    </div>
+
+    <!-- 2. Gross Profit -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Gross Profit</span>
+            <div class="kpi-icon-wrap" style="color: var(--accent-emerald);"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        </div>
+        <div class="kpi-value num-tabular" style="color: var(--accent-emerald);">{{ kpis.total_profit|currency }}</div>
+        <div class="kpi-footer">
+            <span class="badge bg-success-subtle text-success border border-success-subtle num-tabular">{{ kpis.profit_margin_pct }}% margin</span>
+            <span>(Rev &minus; COGS)</span>
+        </div>
+    </div>
+
+    <!-- 3. Total Orders -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Eligible Orders</span>
+            <div class="kpi-icon-wrap" style="color: #475569;"><i class="fa-solid fa-receipt"></i></div>
+        </div>
+        <div class="kpi-value num-tabular">{{ kpis.total_orders|number }}</div>
+        <div class="kpi-footer">
+            <span class="text-muted">Avg: {{ kpis.average_order_value|currency }} per order</span>
+        </div>
+    </div>
+
+    <!-- 4. Total Units Sold -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Units Sold</span>
+            <div class="kpi-icon-wrap" style="color: var(--accent-gold);"><i class="fa-solid fa-boxes-packing"></i></div>
+        </div>
+        <div class="kpi-value num-tabular">{{ kpis.total_units_sold|number }}</div>
+        <div class="kpi-footer">
+            <span class="text-muted">Line items fulfilled</span>
+        </div>
+    </div>
+
+    <!-- 5. Average Order Value -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Avg Order Value (AOV)</span>
+            <div class="kpi-icon-wrap" style="color: #6366f1;"><i class="fa-solid fa-scale-balanced"></i></div>
+        </div>
+        <div class="kpi-value num-tabular">{{ kpis.average_order_value|currency }}</div>
+        <div class="kpi-footer">
+            <span class="text-muted">Net sales / order volume</span>
+        </div>
+    </div>
+
+    <!-- 6. Target Achievement -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Target Achievement</span>
+            <div class="kpi-icon-wrap" style="color: var(--accent-gold);"><i class="fa-solid fa-bullseye"></i></div>
+        </div>
+        <div class="kpi-value num-tabular {% if kpis.target_achievement >= 100 %}text-success{% elif kpis.target_achievement >= 80 %}text-warning{% else %}text-secondary{% endif %}">
+            {{ kpis.target_achievement }}%
+        </div>
+        <div class="kpi-footer">
+            <span class="text-muted">Target: {{ kpis.target_amount|currency }} ({{ kpis.target_period }})</span>
+        </div>
+    </div>
+
+    <!-- 7. Revenue Growth -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Revenue Growth</span>
+            <div class="kpi-icon-wrap"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        </div>
+        <div class="kpi-value num-tabular">
+            {% if kpis.growth_pct >= 0 %}+{{ kpis.growth_pct }}%{% else %}{{ kpis.growth_pct }}%{% endif %}
+        </div>
+        <div class="kpi-footer">
+            {% if kpis.growth_pct >= 0 %}
+                <span class="trend-badge trend-up"><i class="fa-solid fa-arrow-up"></i> Expansion</span>
+            {% else %}
+                <span class="trend-badge trend-down"><i class="fa-solid fa-arrow-down"></i> Contraction</span>
+            {% endif %}
+            <span class="text-muted">vs prior window</span>
+        </div>
+    </div>
+
+    <!-- 8. Low-Stock Alerts -->
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <span class="kpi-title">Reorder Alerts</span>
+            <div class="kpi-icon-wrap" style="color: #dc2626;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        </div>
+        <div class="kpi-value num-tabular {% if kpis.low_stock_count > 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ kpis.low_stock_count }}
+        </div>
+        <div class="kpi-footer">
+            {% if kpis.low_stock_count > 0 %}
+                <a href="{{ url_for('products.index', low_stock=1) }}" class="text-danger fw-semibold small text-decoration-none">
+                    <i class="fa-solid fa-arrow-right small"></i> Inspect low stock
+                </a>
+            {% else %}
+                <span class="text-success small"><i class="fa-solid fa-check small"></i> Buffer adequate</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Business Insights Section -->
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-lightbulb text-warning me-2"></i>Automated Business Insights & Observations
+        </h5>
+        <span class="badge bg-light text-secondary border small">Dynamically Synthesized via SQL Aggregations</span>
+    </div>
+
+    <div class="row g-2">
+        {% for insight in insights %}
+        <div class="col-md-6">
+            <div class="insight-card type-{{ insight.type }}">
+                <div class="insight-tag">{{ insight.category }}</div>
+                <div class="insight-title">{{ insight.title }}</div>
+                <div class="insight-desc">{{ insight.description }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Interactive Charts Grid (8 Required Visualizations) -->
+<div class="charts-grid">
+    <!-- Chart 1: Monthly Revenue Trend -->
+    <div class="chart-card col-8">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-chart-line text-primary"></i> Monthly Revenue & Gross Profit Trend</h6>
+                <div class="chart-subtitle">Historical performance and recognized margin over time</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartMonthlyTrend"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 5: Order Status Distribution -->
+    <div class="chart-card col-4">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-chart-pie text-secondary"></i> Order Status Distribution</h6>
+                <div class="chart-subtitle">Operational fulfillment & payment health</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartOrderStatus"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: Revenue by Product Category -->
+    <div class="chart-card col-6">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-chart-column text-success"></i> Category Revenue & Margin</h6>
+                <div class="chart-subtitle">Gross revenue and gross profit contribution per category</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartCategoryRevenue"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 3: Top 10 Products -->
+    <div class="chart-card col-6">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-ranking-star text-warning"></i> Top Performing Products</h6>
+                <div class="chart-subtitle">Highest net revenue generators in catalog</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartTopProducts"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 6: Sales Target vs Actual -->
+    <div class="chart-card col-6">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-bullseye text-danger"></i> Monthly Target vs. Actual Revenue</h6>
+                <div class="chart-subtitle">Evaluating attainment against predefined revenue goals</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartTargetVsActual"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 4: Product Profitability Breakdown -->
+    <div class="chart-card col-6">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-coins text-primary"></i> Product Profitability (Revenue, COGS, Profit)</h6>
+                <div class="chart-subtitle">Cost of goods sold vs gross profit spread</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartProfitability"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 7: Customer Revenue Contribution -->
+    <div class="chart-card col-6">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-users-viewfinder text-info"></i> Customer Revenue Contribution</h6>
+                <div class="chart-subtitle">Top client accounts ranked by recognized monetary spend</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartCustomerContrib"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 8: Period Revenue Growth -->
+    <div class="chart-card col-6">
+        <div class="chart-card-header">
+            <div>
+                <h6 class="chart-title"><i class="fa-solid fa-arrow-trend-up text-success"></i> MoM Growth & Period Comparison</h6>
+                <div class="chart-subtitle">Month-over-month growth trajectory rate (%)</div>
+            </div>
+        </div>
+        <div class="chart-canvas-container">
+            <canvas id="chartRevenueGrowth"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Collect active search query parameters
+    const searchParams = new URLSearchParams(window.location.search).toString();
+    initDashboardCharts("{{ url_for('dashboard.chart_data') }}", searchParams);
+});
+</script>
+{% endblock %}

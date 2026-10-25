@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Catalog Product{% endblock %}
+{% block header_title %}{{ action }} Product Specification{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-box text-primary me-2"></i>{{ action }} Product Details
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold text-secondary">Product Name *</label>
+                            <input type="text" class="form-control" name="product_name" value="{{ product.product_name if product else '' }}" placeholder="e.g. Nexus 24-Port Managed PoE Switch" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-secondary">SKU Code *</label>
+                            <input type="text" class="form-control font-monospace text-uppercase" name="SKU" value="{{ product.SKU if product else '' }}" placeholder="PRD-NET-401" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Category *</label>
+                            <select class="form-select" name="category_id" required>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.category_id }}" {% if product and product.category_id == cat.category_id %}selected{% endif %}>
+                                        {{ cat.category_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Lifecycle Status *</label>
+                            <select class="form-select" name="product_status" required>
+                                {% for st in ['Active', 'Discontinued', 'Out of Stock'] %}
+                                    <option value="{{ st }}" {% if product and product.product_status == st %}selected{% endif %}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Unit Retail Selling Price ($) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="unit_price" value="{{ product.unit_price if product else '0.00' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Unit Acquisition Cost ($) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="unit_cost" value="{{ product.unit_cost if product else '0.00' }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Current Stock Quantity *</label>
+                            <input type="number" min="0" class="form-control" name="stock_quantity" value="{{ product.stock_quantity if product else '0' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Safety Reorder Level *</label>
+                            <input type="number" min="0" class="form-control" name="reorder_level" value="{{ product.reorder_level if product else '10' }}" required>
+                            <div class="form-text small">Alert triggers when stock on hand falls at or below this value.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('products.index') }}" class="btn btn-secondary-custom">Cancel</a>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fa-solid fa-check me-1"></i>Save Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

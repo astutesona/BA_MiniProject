@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Business Intelligence Reports & Exports{% endblock %}
+{% block header_title %}Operational & Analytical Reports Generator{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <p class="text-secondary small mb-0">Generate filtered tabular reports directly from MySQL database and export sanitized CSV datasets.</p>
+    </div>
+    <div>
+        <a href="{{ request.full_path }}{% if '?' in request.full_path %}&{% else %}?{% endif %}export=1" class="btn btn-sm btn-primary-custom">
+            <i class="fa-solid fa-file-csv me-1"></i>Download CSV Report
+        </a>
+    </div>
+</div>
+
+<!-- Report Navigation Tabs -->
+<ul class="nav nav-pills mb-3 gap-1 bg-white p-2 rounded border shadow-sm">
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'monthly_sales' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='monthly_sales') }}">
+            Monthly Sales
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'product_performance' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='product_performance') }}">
+            Product Performance
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'category_revenue' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='category_revenue') }}">
+            Category Revenue
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'customer_sales' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='customer_sales') }}">
+            Customer Sales
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'profitability' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='profitability') }}">
+            Profitability Matrix
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'inventory' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='inventory') }}">
+            Inventory & Valuation
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link py-1 px-3 small {% if report_type == 'sales_targets' %}active bg-dark text-white{% else %}text-secondary{% endif %}" href="{{ url_for('reports.index', report_type='sales_targets') }}">
+            Sales Targets
+        </a>
+    </li>
+</ul>
+
+<!-- Report Specific Parameter Filters -->
+<div class="filter-bar mb-3">
+    <form method="GET" action="{{ url_for('reports.index') }}" class="row g-2 align-items-end">
+        <input type="hidden" name="report_type" value="{{ report_type }}">
+
+        {% if report_type in ['monthly_sales'] %}
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Start Date</label>
+            <input type="date" class="form-control form-control-sm" name="start_date" value="{{ start_date or '' }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">End Date</label>
+            <input type="date" class="form-control form-control-sm" name="end_date" value="{{ end_date or '' }}">
+        </div>
+        {% endif %}
+
+        {% if report_type in ['product_performance'] %}
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Filter Category</label>
+            <select class="form-select form-select-sm" name="category_id">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.category_id }}" {% if selected_category == cat.category_id %}selected{% endif %}>{{ cat.category_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        {% if report_type in ['customer_sales'] %}
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Filter Segment</label>
+            <select class="form-select form-select-sm" name="segment">
+                <option value="">All Segments</option>
+                {% for s in segments %}
+                    <option value="{{ s }}" {% if selected_segment == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="col-md-3 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-primary-custom flex-grow-1">Filter Records</button>
+            <a href="{{ url_for('reports.index', report_type=report_type) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Tabular Report Output -->
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0 text-dark">
+            Report Records: {{ report_type|replace('_', ' ')|title }} ({{ data|length }} rows)
+        </h6>
+        <span class="badge bg-light text-muted border small">CSV Injection Protection Enabled</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    {% for h in headers %}
+                        <th class="{% if '($)' in h or '(%)' in h or 'Orders' in h or 'Units' in h or 'Stock' in h %}text-end{% endif %}">
+                            {{ h }}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if data %}
+                    {% for row in data %}
+                    <tr>
+                        {% if report_type == 'monthly_sales' %}
+                            <td class="fw-bold">{{ row.month }}</td>
+                            <td class="num-tabular text-end">{{ row.total_orders|number }}</td>
+                            <td class="num-tabular text-end">{{ row.total_units|number }}</td>
+                            <td class="num-tabular text-end fw-bold">{{ row.revenue|currency }}</td>
+                            <td class="num-tabular text-end text-muted">{{ row.cogs|currency }}</td>
+                            <td class="num-tabular text-end text-success fw-bold">{{ row.gross_profit|currency }}</td>
+                            <td class="num-tabular text-end text-primary">{{ row.margin_pct }}%</td>
+
+                        {% elif report_type == 'product_performance' %}
+                            <td class="num-tabular text-muted">#{{ row.product_id }}</td>
+                            <td class="fw-bold">{{ row.product_name }}</td>
+                            <td class="font-monospace small text-muted">{{ row.sku }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ row.category_name }}</span></td>
+                            <td class="num-tabular text-end">{{ row.unit_price|currency }}</td>
+                            <td class="num-tabular text-end text-muted">{{ row.unit_cost|currency }}</td>
+                            <td class="num-tabular text-end">{{ row.stock }}</td>
+                            <td class="num-tabular text-end fw-semibold">{{ row.units_sold }}</td>
+                            <td class="num-tabular text-end fw-bold text-dark">{{ row.revenue|currency }}</td>
+                            <td class="num-tabular text-end text-success fw-bold">{{ row.profit|currency }}</td>
+
+                        {% elif report_type == 'category_revenue' %}
+                            <td class="fw-bold">{{ row.category_name }}</td>
+                            <td class="num-tabular text-end">{{ row.total_products }}</td>
+                            <td class="num-tabular text-end">{{ row.units_sold }}</td>
+                            <td class="num-tabular text-end fw-bold text-dark">{{ row.revenue|currency }}</td>
+                            <td class="num-tabular text-end text-success fw-bold">{{ row.profit|currency }}</td>
+
+                        {% elif report_type == 'customer_sales' %}
+                            <td class="num-tabular text-muted">#{{ row.customer_id }}</td>
+                            <td class="fw-bold">{{ row.customer_name }}</td>
+                            <td><span class="badge bg-primary">{{ row.segment }}</span></td>
+                            <td>{{ row.city }}</td>
+                            <td>{{ row.state }}</td>
+                            <td class="num-tabular text-end">{{ row.orders }}</td>
+                            <td class="num-tabular text-end fw-bold text-dark">{{ row.total_spent|currency }}</td>
+
+                        {% elif report_type == 'profitability' %}
+                            <td><span class="badge bg-light text-dark border">{{ row.category }}</span></td>
+                            <td class="fw-bold">{{ row.product }}</td>
+                            <td class="font-monospace small text-muted">{{ row.sku }}</td>
+                            <td class="num-tabular text-end fw-bold">{{ row.revenue|currency }}</td>
+                            <td class="num-tabular text-end text-muted">{{ row.cogs|currency }}</td>
+                            <td class="num-tabular text-end text-success fw-bold">{{ row.profit|currency }}</td>
+                            <td class="num-tabular text-end text-primary">{{ row.margin_pct }}%</td>
+
+                        {% elif report_type == 'inventory' %}
+                            <td class="num-tabular text-muted">#{{ row.product_id }}</td>
+                            <td class="fw-bold">{{ row.product_name }}</td>
+                            <td class="font-monospace small text-muted">{{ row.sku }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ row.category }}</span></td>
+                            <td class="num-tabular text-end text-muted">{{ row.unit_cost|currency }}</td>
+                            <td class="num-tabular text-end">{{ row.unit_price|currency }}</td>
+                            <td class="num-tabular text-end fw-bold">{{ row.stock }}</td>
+                            <td class="num-tabular text-end text-muted">{{ row.reorder_level }}</td>
+                            <td><span class="badge-status status-{{ row.status|lower }}">{{ row.status }}</span></td>
+                            <td class="num-tabular text-end fw-bold text-dark">{{ row.valuation|currency }}</td>
+
+                        {% elif report_type == 'sales_targets' %}
+                            <td class="num-tabular text-muted">#{{ row.target_id }}</td>
+                            <td class="fw-bold">{{ row.period }}</td>
+                            <td>{{ row.type }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ row.category }}</span></td>
+                            <td class="num-tabular text-end text-muted">{{ row.target_amount|currency }}</td>
+                            <td class="num-tabular text-end fw-bold">{{ row.actual_revenue|currency }}</td>
+                            <td class="num-tabular text-end fw-bold text-success">{{ row.achievement_pct }}%</td>
+                            <td><span class="badge-status status-completed">{{ row.status }}</span></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="{{ headers|length }}" class="text-center py-4 text-muted">
+                            No records found for the selected parameters.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

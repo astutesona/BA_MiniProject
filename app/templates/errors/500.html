@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Server Error (500){% endblock %}
+{% block header_title %}Server Transaction Exception{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 text-center">
+        <div class="mb-3 text-warning">
+            <i class="fa-solid fa-triangle-exclamation fa-4x"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">500 - Server Exception Encountered</h3>
+        <p class="text-secondary mb-4">
+            An unexpected error occurred during database or transaction processing. The active transaction was safely rolled back to guarantee referential integrity and data consistency.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary-custom">
+                <i class="fa-solid fa-gauge-high me-1"></i>Return to Dashboard
+            </a>
+            <a href="javascript:history.back()" class="btn btn-secondary-custom">Go Back</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

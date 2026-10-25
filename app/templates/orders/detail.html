@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Order #{{ order.order_id }} Details{% endblock %}
+{% block header_title %}Order Transaction #{{ order.order_id }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Order Summary Column -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm mb-3" style="border-radius: var(--radius-md);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge-status status-{{ order.order_status|lower }} fs-6">
+                        {{ order.order_status }}
+                    </span>
+                    <span class="badge-status status-{{ order.payment_status|lower }} fs-6">
+                        {{ order.payment_status }}
+                    </span>
+                </div>
+
+                <div class="p-3 bg-light rounded mb-3">
+                    <div class="small text-muted mb-1">Total Recognized Revenue:</div>
+                    <div class="h3 fw-bold text-primary mb-0 num-tabular">{{ order.total_revenue|currency }}</div>
+                    <div class="small text-success mt-1 num-tabular">
+                        <i class="fa-solid fa-chart-line me-1"></i>Gross Profit: {{ order.total_profit|currency }}
+                    </div>
+                </div>
+
+                <ul class="list-unstyled small mb-3">
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Order Date:</span>
+                        <span class="fw-semibold">{{ order.order_date|datetime_fmt('%b %d, %Y %H:%M:%S') }}</span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Customer Name:</span>
+                        <a href="{{ url_for('customers.detail', customer_id=order.customer.customer_id) }}" class="fw-semibold text-decoration-none">
+                            {{ order.customer.customer_name }}
+                        </a>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Customer Segment:</span>
+                        <span class="fw-semibold">{{ order.customer.customer_segment }}</span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Payment Method:</span>
+                        <span class="fw-semibold">{{ order.payment_method }}</span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Created By:</span>
+                        <span class="fw-semibold">{{ order.creator.full_name if order.creator else 'System' }}</span>
+                    </li>
+                    <li class="py-2 border-bottom d-flex justify-content-between">
+                        <span class="text-muted">Eligible for Recognized Sales:</span>
+                        <span class="fw-bold {% if order.is_recognized_sale %}text-success{% else %}text-danger{% endif %}">
+                            {{ 'YES' if order.is_recognized_sale else 'NO' }}
+                        </span>
+                    </li>
+                </ul>
+
+                <!-- Status Transition Form -->
+                {% if current_user.can_create_orders() %}
+                <div class="p-3 border rounded bg-white">
+                    <label class="form-label small fw-bold text-dark mb-2">Update Order State</label>
+                    <form method="POST" action="{{ url_for('orders.update_status', order_id=order.order_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-1">Order Status</label>
+                            <select class="form-select form-select-sm" name="order_status">
+                                {% for st in ['Completed', 'Pending', 'Processing', 'Cancelled', 'Returned'] %}
+                                    <option value="{{ st }}" {% if order.order_status == st %}selected{% endif %}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Payment Status</label>
+                            <select class="form-select form-select-sm" name="payment_status">
+                                {% for pay in ['Paid', 'Pending', 'Failed', 'Refunded'] %}
+                                    <option value="{{ pay }}" {% if order.payment_status == pay %}selected{% endif %}>{{ pay }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-primary-custom w-100">
+                            Apply Transition
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Line Items Breakdown Column -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md); overflow: hidden;">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-list-check text-primary me-2"></i>Line Items Snapshot ({{ order.items|length }} items)
+                </h6>
+                <span class="badge bg-light text-secondary border small">Historical Prices Preserved</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product Description</th>
+                            <th>SKU</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Unit Price at Sale</th>
+                            <th class="text-end">Unit Cost at Sale</th>
+                            <th class="text-end">Line Discount</th>
+                            <th class="text-end">Line Revenue</th>
+                            <th class="text-end">Line Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('products.detail', product_id=item.product.product_id) }}" class="fw-bold text-dark text-decoration-none">
+                                    {{ item.product.product_name }}
+                                </a>
+                                <div class="small text-muted">{{ item.product.category.category_name }}</div>
+                            </td>
+                            <td class="font-monospace small text-muted">{{ item.product.SKU }}</td>
+                            <td class="num-tabular text-center fw-semibold">{{ item.quantity }}</td>
+                            <td class="num-tabular text-end">{{ item.unit_price_at_sale|currency }}</td>
+                            <td class="num-tabular text-end text-muted">{{ item.unit_cost_at_sale|currency }}</td>
+                            <td class="num-tabular text-end text-muted">{{ item.discount_amount|currency }}</td>
+                            <td class="num-tabular text-end fw-bold text-dark">{{ item.line_revenue|currency }}</td>
+                            <td class="num-tabular text-end text-success fw-bold">{{ item.line_profit|currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-light">
+                        <tr class="fw-bold">
+                            <td colspan="6" class="text-end py-3">Recognized Net Sales Total:</td>
+                            <td class="text-end py-3 text-primary h6 mb-0 num-tabular">{{ order.total_revenue|currency }}</td>
+                            <td class="text-end py-3 text-success h6 mb-0 num-tabular">{{ order.total_profit|currency }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-3 p-3 bg-white border rounded small text-secondary">
+            <i class="fa-solid fa-circle-info text-info me-1"></i>
+            <strong>DBMS Design Concept:</strong> Line items record `unit_price_at_sale` and `unit_cost_at_sale` as an immutable snapshot. Subsequent changes to catalog prices do not alter historical order accounting or recognized revenue reports.
+        </div>
+    </div>
+</div>
+{% endblock %}

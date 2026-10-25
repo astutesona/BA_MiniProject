@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Create User Account{% endblock %}
+{% block header_title %}Create User & Assign Role{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-md);">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-user-shield text-primary me-2"></i>New Application User
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Full Name *</label>
+                        <input type="text" class="form-control" name="full_name" placeholder="e.g. Jordan Miller" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Username *</label>
+                            <input type="text" class="form-control" name="username" placeholder="jmiller" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Corporate Email *</label>
+                            <input type="email" class="form-control" name="email" placeholder="jordan@salesintel.local" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Initial Password *</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Role & Privilege Tier *</label>
+                            <select class="form-select" name="role" required>
+                                <option value="Sales Employee">Sales Employee (Orders & Clients)</option>
+                                <option value="Manager">Manager (BI Dashboards & Targets)</option>
+                                <option value="Admin">Admin (Full System & DDL Control)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('users.index') }}" class="btn btn-secondary-custom">Cancel</a>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fa-solid fa-check me-1"></i>Create Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

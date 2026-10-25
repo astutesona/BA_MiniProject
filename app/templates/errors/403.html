@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Access Denied (403){% endblock %}
+{% block header_title %}Authorization Restriction{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 text-center">
+        <div class="mb-3 text-danger">
+            <i class="fa-solid fa-shield-halved fa-4x"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">403 - Access Prohibited</h3>
+        <p class="text-secondary mb-4">
+            Your current assigned role (<strong>{{ current_user.role if current_user.is_authenticated else 'Guest' }}</strong>) lacks authorization to access this operational module or execute this action.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary-custom">
+                <i class="fa-solid fa-gauge-high me-1"></i>Return to Dashboard
+            </a>
+            <a href="javascript:history.back()" class="btn btn-secondary-custom">Go Back</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
