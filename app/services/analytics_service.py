@@ -179,8 +179,9 @@ class AnalyticsService:
     @classmethod
     def get_monthly_revenue_trend(cls, filters=None):
         """Chart 1: Monthly Revenue Trend over time."""
+        month_col = func.date_format(Order.order_date, '%Y-%m').label('sales_month')
         query = db.session.query(
-            func.date_format(Order.order_date, '%Y-%m').label('sales_month'),
+            month_col,
             func.coalesce(func.sum((OrderItem.quantity * OrderItem.unit_price_at_sale) - OrderItem.discount_amount), 0).label('monthly_revenue'),
             func.coalesce(func.sum(OrderItem.quantity * OrderItem.unit_cost_at_sale), 0).label('monthly_cogs')
         ).select_from(Order)\
@@ -190,7 +191,7 @@ class AnalyticsService:
          .filter(Order.order_status == 'Completed', Order.payment_status == 'Paid')
 
         query = cls._apply_filters(query, filters)
-        results = query.group_by('sales_month').order_by('sales_month').all()
+        results = query.group_by(month_col).order_by(month_col.asc()).all()
 
         labels = [r.sales_month for r in results]
         revenue = [float(r.monthly_revenue) for r in results]
@@ -374,12 +375,13 @@ class AnalyticsService:
     @classmethod
     def get_revenue_growth_series(cls):
         """Chart 8: Consecutive Monthly Revenue Comparison & Growth Rate."""
+        month_col = func.date_format(Order.order_date, '%Y-%m').label('month')
         query = db.session.query(
-            func.date_format(Order.order_date, '%Y-%m').label('month'),
+            month_col,
             func.coalesce(func.sum((OrderItem.quantity * OrderItem.unit_price_at_sale) - OrderItem.discount_amount), 0).label('rev')
         ).select_from(Order).join(OrderItem)\
          .filter(Order.order_status == 'Completed', Order.payment_status == 'Paid')\
-         .group_by('month').order_by('month').all()
+         .group_by(month_col).order_by(month_col.asc()).all()
 
         months = [r.month for r in query]
         revenues = [float(r.rev) for r in query]

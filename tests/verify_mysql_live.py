@@ -56,7 +56,17 @@ def verify_live():
         chart_json = res_api.get_json()
         print(f"    Chart JSON returned: {len(chart_json['monthly_trend']['labels'])} months in trend, {len(chart_json['top_products']['labels'])} top products.")
 
-        print("\n[SUCCESS] Live MySQL database integration and analytics fully verified!")
+        # Test Reports and Exports against live MySQL
+        print("\n[*] Testing Reports & Exports on live MySQL:")
+        for r_type in ['monthly_sales', 'product_performance', 'category_revenue', 'customer_sales', 'profitability', 'inventory', 'sales_targets']:
+            res_rep = client.get(f'/reports/?report_type={r_type}')
+            assert res_rep.status_code == 200, f"Report {r_type} failed on live MySQL: {res_rep.status_code}"
+            res_csv = client.get(f'/reports/?report_type={r_type}&export=1')
+            assert res_csv.status_code == 200, f"CSV export {r_type} failed on live MySQL: {res_csv.status_code}"
+            assert res_csv.content_type.startswith('text/csv')
+            print(f"    Report & CSV export '{r_type}': OK (200)")
+
+        print("\n[SUCCESS] Live MySQL database integration, Reports, and CSV Exports fully verified!")
 
 if __name__ == '__main__':
     verify_live()

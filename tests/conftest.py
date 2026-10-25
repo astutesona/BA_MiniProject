@@ -11,6 +11,23 @@ from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.models.sales_target import SalesTarget
 
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+@event.listens_for(Engine, "connect")
+def setup_sqlite_functions(dbapi_connection, connection_record):
+    if hasattr(dbapi_connection, 'create_function'):
+        def sqlite_date_format(val, fmt):
+            if val is None:
+                return None
+            s = str(val)
+            if fmt == '%Y-%m':
+                return s[:7]
+            elif fmt == '%Y':
+                return s[:4]
+            return s
+        dbapi_connection.create_function("date_format", 2, sqlite_date_format)
+
 @pytest.fixture
 def app():
     app = create_app('testing')

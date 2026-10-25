@@ -37,8 +37,9 @@ class ReportService:
 
     @staticmethod
     def get_monthly_sales_report(start_date=None, end_date=None):
+        month_col = func.date_format(Order.order_date, '%Y-%m').label('month')
         query = db.session.query(
-            func.date_format(Order.order_date, '%Y-%m').label('month'),
+            month_col,
             func.count(func.distinct(Order.order_id)).label('total_orders'),
             func.coalesce(func.sum(OrderItem.quantity), 0).label('total_units'),
             func.coalesce(func.sum((OrderItem.quantity * OrderItem.unit_price_at_sale) - OrderItem.discount_amount), 0).label('revenue'),
@@ -51,7 +52,7 @@ class ReportService:
         if end_date:
             query = query.filter(Order.order_date <= end_date)
 
-        results = query.group_by('month').order_by('month DESC').all()
+        results = query.group_by(month_col).order_by(month_col.desc()).all()
         data = []
         for r in results:
             rev = float(r.revenue)
